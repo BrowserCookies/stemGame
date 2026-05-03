@@ -1,0 +1,24 @@
+{
+  "name": "stemgame",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/BrowserCookies/stemGame#readme",
+  "bugs": {
+    "url": "https://github.com/BrowserCookies/stemGame/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BrowserCookies/stemGame.git"
+  },
+  "license": "ISC",
+  "author": "PGTK11",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}
