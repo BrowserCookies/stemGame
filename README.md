@@ -30,10 +30,6 @@ npm install
 
 3. Set up environment variables:
 
-```bash
-cp example.env .env
-```
-
 4. Start the development server:
 
 ```bash
@@ -48,13 +44,13 @@ The server will run on `http://localhost:3000` by default.
 
 ```
 stemGame/
-├── public/           # Static files (HTML, CSS, assets)
+├── public/           # Static frontend files (HTML, CSS, JS, React)
 ├── src/
 │   ├── assets/       # Images, fonts, etc.
 │   ├── models/       # Data models
-│   ├── modules/      # Reusable modules
-│   │   └── get.date.time.js
-│   └── test/         # Tests
+│   ├── modules/      # Route functions
+│   └── get.date.time.js (test function)
+│  
 ├── server.js         # Express server entry point
 ├── package.json      # Project dependencies
 └── example.env       # Environment variables template
@@ -62,7 +58,7 @@ stemGame/
 
 ## API Endpoints
 
-- `GET /api/date` - Returns current date and time
+- `GET /api/date` - Returns current date and time (test endpoint)
 
 ## Development Notes
 
