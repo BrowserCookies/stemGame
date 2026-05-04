@@ -2,15 +2,15 @@ import User from "../models/User.model.js";
 import bcrypt from "bcrypt";
 import requestIp from "request-ip";
 
-function saveUser(req, res) {
+function SaveUser(req, res) {
   const userData = JSON.parse(atob(req.query.userData));
 
   try {
     const hashedPassword = bcrypt.hashSync(userData.password, 10);
 
-    const sessionTokenOrigin = `${userData.username}@${hashedPassword}`;
-    const sessionToken = bcrypt.hashSync(sessionTokenOrigin, 10);
-    const base64SessionToken = btoa(sessionToken);
+    const authStringOrigin = `${userData.username}@${hashedPassword}`;
+    const authString = bcrypt.hashSync(authStringOrigin, 10);
+    const base64authString = btoa(authString);
 
     const colorsArr = [
       "#ff9800",
@@ -27,7 +27,7 @@ function saveUser(req, res) {
       username: userData.username,
       email: userData.email,
       password: hashedPassword,
-      sessionToken: sessionToken,
+      authString: authString,
       ip_encrypted: bcrypt.hashSync(requestIp.getClientIp(req), 10),
       color: colorsArr[Math.floor(Math.random() * colorsArr.length)],
     });
@@ -35,7 +35,7 @@ function saveUser(req, res) {
     user.save().then((response) => {
       res.send({
         payload: true,
-        sessionToken: base64SessionToken,
+        authString: base64authString,
       });
     });
   } catch (error) {
@@ -44,4 +44,4 @@ function saveUser(req, res) {
   }
 }
 
-export default saveUser;
+export default SaveUser;

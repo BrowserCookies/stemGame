@@ -29,7 +29,7 @@ const UserSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    sessionToken: {
+    authString: {
       type: String,
     },
     color: {

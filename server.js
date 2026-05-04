@@ -35,8 +35,10 @@ server.listen(PORT, () => {
 
 //== importing modules ==//
 import GetDateTime from "./src/modules/get.date.time.js";
-import saveUser from "./src/modules/save.users.js";
+import SaveUser from "./src/modules/save.users.js";
+import GetUser from "./src/modules/get.user.js";
 
 //== API endpoints ==//
 server.get("/api/date", GetDateTime);
-server.post("/db/set-user", saveUser);
+server.post("/db/set-user", SaveUser);
+server.get("/db/get-user", GetUser);
