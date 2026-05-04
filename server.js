@@ -2,12 +2,24 @@ import express from "express";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import GetDateTime from "./src/modules/get.date.time.js";
+import mongoose from "mongoose";
+import dns from "node:dns";
+
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
+dotenv.config();
+
+mongoose
+  .connect(process.env.MDB_CONN)
+  .then(() => {
+    console.log("Connected to MongoDB successfully.");
+  })
+  .catch((err) => {
+    console.error("Failed to connect to MongoDB:", err);
+  });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
 const server = express();
 const PORT = process.env.PORT || 3000;
 
@@ -21,5 +33,10 @@ server.listen(PORT, () => {
   );
 });
 
+//== importing modules ==//
+import GetDateTime from "./src/modules/get.date.time.js";
+import saveUser from "./src/modules/save.users.js";
+
+//== API endpoints ==//
 server.get("/api/date", GetDateTime);
- 
+server.post("/db/set-user", saveUser);
