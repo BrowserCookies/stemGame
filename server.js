@@ -23,6 +23,9 @@ const __dirname = path.dirname(__filename);
 const server = express();
 const PORT = process.env.PORT || 3000;
 
+// Body parser middleware
+server.use(express.json());
+
 server.use(express.static(path.join(__dirname, "public")));
 
 server.listen(PORT, () => {
@@ -37,8 +40,11 @@ server.listen(PORT, () => {
 import GetDateTime from "./src/modules/get.date.time.js";
 import SaveUser from "./src/modules/save.users.js";
 import GetUser from "./src/modules/get.user.js";
+import authRoutes from "./src/routes/auth.routes.js";
 
 //== API endpoints ==//
+server.use("/api/auth", authRoutes);
+
 server.get("/api/date", GetDateTime);
 server.post("/db/set-user", SaveUser);
 server.get("/db/get-user", GetUser);
