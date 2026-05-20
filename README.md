@@ -44,21 +44,25 @@ The server will run on `http://localhost:3000` by default.
 
 ```
 stemGame/
-├── public/           # Static frontend files (HTML, CSS, JS, React)
+├── public/                   # Static frontend (index.html + assets)
 ├── src/
-│   ├── assets/       # Images, fonts, etc.
-│   ├── models/       # Data models
-│   ├── modules/      # Route functions
-│   └── get.date.time.js (test function)
-│  
-├── server.js         # Express server entry point
-├── package.json      # Project dependencies
-└── example.env       # Environment variables template
+│   ├── clients/              # External clients (redis, etc.)
+│   ├── controllers/          # Express route handlers
+│   ├── middleware/           # Express middleware (auth, etc.)
+│   ├── models/               # Mongoose models (User, Course)
+│   ├── modules/              # Helper modules and AI provider logic
+│   ├── routes/               # Express route definitions
+│   └── endpoint-docs.md      # Auto-generated endpoint reference (this repo)
+│
+├── server.js                 # Express server entry point
+├── package.json              # Project dependencies
+├── example.env               # Environment variables template
+└── README.md                 # Project readme (this file)
 ```
 
-## API Endpoints
+API endpoint reference has moved to: [src/endpoint-docs.md](src/endpoint-docs.md)
 
-- `GET /api/date` - Returns current date and time (test endpoint)
+Local test script (git-ignored): `src/test/test_endpoints.js` — used to exercise endpoints during development.
 
 ## Development Notes
 
