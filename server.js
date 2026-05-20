@@ -41,10 +41,17 @@ import GetDateTime from "./src/modules/get.date.time.js";
 import SaveUser from "./src/modules/save.users.js";
 import GetUser from "./src/modules/get.user.js";
 import authRoutes from "./src/routes/auth.routes.js";
+import courseRoutes from "./src/routes/course.routes.js";
 
 //== API endpoints ==//
 server.use("/api/auth", authRoutes);
+server.use("/api/course", courseRoutes);
 
 server.get("/api/date", GetDateTime);
 server.post("/db/set-user", SaveUser);
 server.get("/db/get-user", GetUser);
+
+// Serve React single-page app for any other route
+server.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
