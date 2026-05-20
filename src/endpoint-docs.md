@@ -173,4 +173,19 @@ Or found (JSON user object) — example not available in sample run.
 
 ---
 
+**Caching & Test Script**
+
+- Cache keys and TTLs:
+  - `user:<authString>` — cached sanitized user for legacy lookups (set on register/login/me and updated by model hooks). TTL: 3600s.
+  - `userId:<id>` — cached sanitized user keyed by user id (used by `GET /api/auth/me`). TTL: 3600s.
+  - `course:<id>` — cached Course document (set after generation completes or fails). TTL: 3600s.
+
+- Notes:
+  - `GET /api/auth/me` now prefers the `userId:<id>` cache and returns the cached sanitized user when present; it will refresh the cache from DB if missing.
+  - Legacy `GET /db/get-user` will use `user:<authString>` cache; the auth controller and model hooks ensure the cache is populated.
+  - Generated `Course` documents are cached under `course:<id>` after generation finishes or fails; `GET /api/course/status/:id` will read cache when available.
+
+- Test script:
+  - An automated test script is available at `src/test/test_endpoints.js` (this path is git-ignored / local). It exercises the main endpoints and was used to capture the example responses in this document.
+
 If you'd like, I can expand this file with request examples (curl), add authentication examples (how to set `Authorization` header), or generate an OpenAPI spec. Which would you prefer next?

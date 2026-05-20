@@ -1,5 +1,6 @@
 import Course from "../models/Course.model.js";
 import Generator from "../modules/generate.course.js";
+import redis from "../clients/redis.js";
 
 // POST /api/course/suggest
 export async function suggestCourse(req, res) {
@@ -40,10 +41,30 @@ export async function createCourse(req, res) {
         course.title = map.title || course.title;
         course.status = "completed";
         await course.save();
+
+        // update cache
+        try {
+          await redis.set(
+            `course:${course._id}`,
+            JSON.stringify(course.toObject()),
+            { ex: 3600 },
+          );
+        } catch (e) {
+          console.warn("Failed to set course cache", e);
+        }
       } catch (err) {
         console.error("Background generation failed", err);
         course.status = "failed";
         await course.save();
+        try {
+          await redis.set(
+            `course:${course._id}`,
+            JSON.stringify(course.toObject()),
+            { ex: 3600 },
+          );
+        } catch (e) {
+          console.warn("Failed to set course cache after failure", e);
+        }
       }
     })();
 
@@ -57,7 +78,26 @@ export async function createCourse(req, res) {
 // GET /api/course/status/:id
 export async function courseStatus(req, res) {
   try {
-    const course = await Course.findById(req.params.id).select(
+    const id = req.params.id;
+    const cached = await redis.get(`course:${id}`);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return res.json({
+          success: true,
+          status: parsed.status,
+          updatedAt: parsed.updatedAt,
+          createdAt: parsed.createdAt,
+        });
+      } catch (e) {
+        console.warn(
+          "Failed to parse cached course for status, falling back to DB",
+          e,
+        );
+      }
+    }
+
+    const course = await Course.findById(id).select(
       "status updatedAt createdAt",
     );
     if (!course)
@@ -77,9 +117,30 @@ export async function courseStatus(req, res) {
 // GET /api/course/:id
 export async function getCourse(req, res) {
   try {
-    const course = await Course.findById(req.params.id);
+    const id = req.params.id;
+    const cached = await redis.get(`course:${id}`);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return res.json({ success: true, course: parsed });
+      } catch (e) {
+        console.warn("Failed to parse cached course, falling back to DB", e);
+      }
+    }
+
+    const course = await Course.findById(id);
     if (!course)
       return res.status(404).json({ success: false, error: "Not found" });
+
+    // cache the course
+    try {
+      await redis.set(`course:${id}`, JSON.stringify(course.toObject()), {
+        ex: 3600,
+      });
+    } catch (e) {
+      console.warn("Failed to set course cache", e);
+    }
+
     return res.json({ success: true, course });
   } catch (err) {
     console.error(err);
