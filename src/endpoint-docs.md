@@ -187,5 +187,3 @@ Or found (JSON user object) — example not available in sample run.
 
 - Test script:
   - An automated test script is available at `src/test/test_endpoints.js` (this path is git-ignored / local). It exercises the main endpoints and was used to capture the example responses in this document.
-
-If you'd like, I can expand this file with request examples (curl), add authentication examples (how to set `Authorization` header), or generate an OpenAPI spec. Which would you prefer next?
