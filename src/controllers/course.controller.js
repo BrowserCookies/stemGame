@@ -2,7 +2,6 @@ import Course from "../models/Course.model.js";
 import Generator from "../modules/generate.course.js";
 import redis from "../clients/redis.js";
 
-// POST /api/course/suggest
 export async function suggestCourse(req, res) {
   try {
     const answers = req.body;
@@ -14,7 +13,6 @@ export async function suggestCourse(req, res) {
   }
 }
 
-// POST /api/course/generate -> creates Course doc and generates in background
 export async function createCourse(req, res) {
   try {
     const { title, prompt, answers } = req.body;
@@ -33,7 +31,6 @@ export async function createCourse(req, res) {
     });
     await course.save();
 
-    // kick off background generation (don't await)
     (async () => {
       try {
         const map = await Generator.generateFullCourseMap(answers);
@@ -42,7 +39,6 @@ export async function createCourse(req, res) {
         course.status = "completed";
         await course.save();
 
-        // update cache
         try {
           await redis.set(
             `course:${course._id}`,
@@ -75,7 +71,6 @@ export async function createCourse(req, res) {
   }
 }
 
-// GET /api/course/status/:id
 export async function courseStatus(req, res) {
   try {
     const id = req.params.id;
@@ -114,7 +109,6 @@ export async function courseStatus(req, res) {
   }
 }
 
-// GET /api/course/:id
 export async function getCourse(req, res) {
   try {
     const id = req.params.id;
@@ -132,7 +126,6 @@ export async function getCourse(req, res) {
     if (!course)
       return res.status(404).json({ success: false, error: "Not found" });
 
-    // cache the course
     try {
       await redis.set(`course:${id}`, JSON.stringify(course.toObject()), {
         ex: 3600,

@@ -41,7 +41,6 @@ const UserSchema = new Schema(
   { collection: "users" },
 );
 
-// Add hooks to keep Redis cache in sync
 UserSchema.post("save", async function (doc) {
   try {
     const obj = doc.toObject();

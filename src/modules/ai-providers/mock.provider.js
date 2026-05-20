@@ -1,4 +1,3 @@
-// Mock provider used when no real provider is selected or configured.
 export async function call(prompt) {
   return {
     title: "Intro to Practical JavaScript",

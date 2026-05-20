@@ -1,5 +1,3 @@
-// DeepSeek provider integration (stub).
-// Configure with DEEPSEEK_API_KEY and optionally DEEPSEEK_API_URL.
 const DEEPSEEK_URL =
   process.env.DEEPSEEK_API_URL || "https://api.deepseek.example/v1/generate";
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
@@ -24,7 +22,6 @@ export async function call(prompt) {
   }
 
   const json = await res.json();
-  // Try common fields then fall back to raw
   const content =
     json.output ||
     json.result ||

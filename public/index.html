@@ -18,19 +18,386 @@
     ></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f6f8fa;
+      }
+      .wrap {
+        max-width: 1000px;
+        margin: 24px auto;
+        background: #fff;
+        padding: 16px;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+      h1 {
+        margin-top: 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .card {
+        padding: 12px;
+        border: 1px solid #eee;
+        border-radius: 6px;
+        background: #fafafa;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 8px;
+        margin-top: 4px;
+        box-sizing: border-box;
+      }
+      button {
+        margin-top: 8px;
+        padding: 8px 12px;
+      }
+      pre {
+        max-height: 240px;
+        overflow: auto;
+        background: #111;
+        color: #0f0;
+        padding: 8px;
+        border-radius: 4px;
+      }
+      .full {
+        grid-column: 1 / -1;
+      }
+    </style>
+
     <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      function useLocalToken() {
+        const [token, setToken] = useState(
+          localStorage.getItem("authToken") || "",
+        );
+        useEffect(() => {
+          if (token) localStorage.setItem("authToken", token);
+          else localStorage.removeItem("authToken");
+        }, [token]);
+        return [token, setToken];
+      }
+
+      function pretty(v) {
+        try {
+          return JSON.stringify(v, null, 2);
+        } catch (e) {
+          return String(v);
+        }
+      }
+
       function App() {
+        const [token, setToken] = useLocalToken();
+        const [log, setLog] = useState("Ready");
+        const [suggestRes, setSuggestRes] = useState(null);
+
+        const append = (t, obj) =>
+          setLog(
+            (l) =>
+              `${new Date().toLocaleTimeString()} [${t}]\n${pretty(obj)}\n\n` +
+              l,
+          );
+
         return (
-          <div
-            style={{
-              fontFamily: "Arial, sans-serif",
-              textAlign: "center",
-              padding: "2rem",
-            }}
-          >
-            <h1>Welcome to STEM Game</h1>
-            <p>A tiny React homepage served from Express.</p>
-            <button onClick={() => alert("Let's play!")}>Play</button>
+          <div className="wrap">
+            <h1>STEM Game — Demo Console</h1>
+            <div className="grid">
+              <div className="card">
+                <h3>Auth</h3>
+                <AuthSection
+                  token={token}
+                  setToken={(t) => {
+                    setToken(t);
+                    append("auth:setToken", t);
+                  }}
+                  append={append}
+                />
+              </div>
+
+              <div className="card">
+                <h3>Server</h3>
+                <ServerSection append={append} />
+              </div>
+
+              <div className="card">
+                <h3>Course</h3>
+                <CourseSection
+                  token={token}
+                  append={append}
+                  setSuggestRes={setSuggestRes}
+                  suggestRes={suggestRes}
+                />
+              </div>
+
+              <div className="card">
+                <h3>DB User (legacy)</h3>
+                <DbUserSection append={append} />
+              </div>
+
+              <div className="card full">
+                <h3>Logs</h3>
+                <pre>{log}</pre>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function AuthSection({ token, setToken, append }) {
+        const [username, setUsername] = useState("");
+        const [email, setEmail] = useState("");
+        const [password, setPassword] = useState("");
+
+        async function register() {
+          const body = { username, email, password };
+          const res = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const j = await res.json();
+          append("register", j);
+          alert(j.message || pretty(j));
+        }
+
+        async function login() {
+          const body = { identifier: username || email, password };
+          const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const j = await res.json();
+          append("login", j);
+          if (j.token) setToken(j.token);
+        }
+
+        async function me() {
+          const res = await fetch("/api/auth/me", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const j = await res.json();
+          append("me", j);
+          alert(pretty(j));
+        }
+
+        return (
+          <div>
+            <label>username</label>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <label>email</label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} />
+            <label>password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={register}>Register</button>
+              <button onClick={login}>Login</button>
+              <button onClick={me} disabled={!token}>
+                Me
+              </button>
+              <button
+                onClick={() => {
+                  setToken("");
+                  append("auth:logout", "cleared");
+                }}
+              >
+                Logout
+              </button>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              Token:{" "}
+              <small style={{ wordBreak: "break-all" }}>
+                {token || "<none>"}
+              </small>
+            </div>
+          </div>
+        );
+      }
+
+      function ServerSection({ append }) {
+        async function date() {
+          const j = await (await fetch("/api/date")).json();
+          append("date", j);
+        }
+        return (
+          <div>
+            <button onClick={date}>Get /api/date</button>
+          </div>
+        );
+      }
+
+      function CourseSection({ token, append, setSuggestRes, suggestRes }) {
+        const [answers, setAnswers] = useState(
+          '{"q1":"web dev","level":"beginner"}',
+        );
+        const [courseId, setCourseId] = useState("");
+        const [statusRes, setStatusRes] = useState(null);
+        const [courseRes, setCourseRes] = useState(null);
+
+        async function suggest() {
+          let body;
+          try {
+            body = JSON.parse(answers);
+          } catch (e) {
+            alert("Answers must be valid JSON");
+            return;
+          }
+          const res = await fetch("/api/course/suggest", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const j = await res.json();
+          setSuggestRes(j);
+          append("course:suggest", j);
+        }
+
+        async function generate() {
+          let body;
+          try {
+            body = JSON.parse(answers);
+          } catch (e) {
+            alert("Answers must be valid JSON");
+            return;
+          }
+          const res = await fetch("/api/course/generate", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ answers: body }),
+          });
+          const j = await res.json();
+          append("course:generate", j);
+          if (j.courseId) setCourseId(j.courseId);
+        }
+
+        async function status() {
+          if (!courseId) return alert("no courseId");
+          const res = await fetch(`/api/course/status/${courseId}`);
+          const j = await res.json();
+          setStatusRes(j);
+          append("course:status", j);
+        }
+
+        async function getCourse() {
+          if (!courseId) return alert("no courseId");
+          const res = await fetch(`/api/course/${courseId}`);
+          const j = await res.json();
+          setCourseRes(j);
+          append("course:get", j);
+        }
+
+        return (
+          <div>
+            <label>Answers (JSON)</label>
+            <textarea
+              rows={4}
+              value={answers}
+              onChange={(e) => setAnswers(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={suggest}>Suggest</button>
+              <button onClick={generate} disabled={!token}>
+                Generate (auth)
+              </button>
+            </div>
+            <label>Course ID</label>
+            <input
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={status}>Status</button>
+              <button onClick={getCourse}>Get Course</button>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <strong>Last Suggestion:</strong>
+              <pre>{pretty(suggestRes)}</pre>
+            </div>
+            <div>
+              <strong>Last Status:</strong>
+              <pre>{pretty(statusRes)}</pre>
+            </div>
+            <div>
+              <strong>Last Course:</strong>
+              <pre>{pretty(courseRes)}</pre>
+            </div>
+          </div>
+        );
+      }
+
+      function DbUserSection({ append }) {
+        const [user, setUser] = useState(
+          '{"firstName":"Api","lastName":"User","username":"setuser1","email":"setuser1@example.com","password":"Password123"}',
+        );
+        const [auth, setAuth] = useState("");
+
+        async function setUserReq() {
+          let obj;
+          try {
+            obj = JSON.parse(user);
+          } catch (e) {
+            alert("Invalid JSON");
+            return;
+          }
+          const b64 = btoa(JSON.stringify(obj));
+          const res = await fetch(
+            `/db/set-user?userData=${encodeURIComponent(b64)}`,
+            { method: "POST" },
+          );
+          const j = await res.json();
+          append("db:set-user", j);
+          alert(pretty(j));
+        }
+
+        async function getUser() {
+          if (!auth) return alert("enter auth string");
+          const res = await fetch(
+            `/db/get-user?auth=${encodeURIComponent(auth)}`,
+          );
+          const text = await res.text();
+          append("db:get-user", text);
+          alert(text);
+        }
+
+        return (
+          <div>
+            <label>New user JSON</label>
+            <textarea
+              rows={4}
+              value={user}
+              onChange={(e) => setUser(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={setUserReq}>Create (db/set-user)</button>
+            </div>
+            <label>auth string (from response)</label>
+            <input value={auth} onChange={(e) => setAuth(e.target.value)} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={getUser}>Get by auth (db/get-user)</button>
+            </div>
           </div>
         );
       }

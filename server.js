@@ -23,7 +23,6 @@ const __dirname = path.dirname(__filename);
 const server = express();
 const PORT = process.env.PORT || 3000;
 
-// Body parser middleware
 server.use(express.json());
 
 server.use(express.static(path.join(__dirname, "public")));

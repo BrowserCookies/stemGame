@@ -6,7 +6,7 @@ function GetUser(req, res) {
 
   redis.get(`user:${authString}`).then((cachedUser) => {
     if (cachedUser) {
-        console.log("Cache hit for user: ", cachedUser);
+      console.log("Cache hit for user: ", cachedUser);
       redis.incr("hit");
       res.send(cachedUser);
     } else {
@@ -14,8 +14,8 @@ function GetUser(req, res) {
         .then((user) => {
           if (user.length > 0) {
             redis.set(`user:${authString}`, JSON.stringify(user[0]), {
-              ex: 3600, // Expire in 1 hour
-            }); // Cache for 1 hour
+              ex: 3600,
+            });
             redis.incr("miss");
             res.send(user[0]);
           } else {

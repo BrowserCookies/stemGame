@@ -8,14 +8,12 @@ export const register = async (req, res) => {
   try {
     const { firstName, lastName, username, email, password } = req.body;
 
-    // Validation
     if (!username || !email || !password) {
       return res
         .status(400)
         .json({ message: "Please provide username, email, and password." });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ username }, { email }] });
     if (existingUser) {
       return res
@@ -23,10 +21,8 @@ export const register = async (req, res) => {
         .json({ message: "Username or email already exists." });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Keep backwards compatibility for authString and colors
     const authStringOrigin = `${username}@${hashedPassword}`;
     const authString = bcrypt.hashSync(authStringOrigin, 10);
     const colorsArr = [
@@ -38,7 +34,6 @@ export const register = async (req, res) => {
       "#3f51b5",
     ];
 
-    // Create user
     const newUser = new User({
       firstName,
       lastName,
@@ -52,11 +47,9 @@ export const register = async (req, res) => {
 
     await newUser.save();
 
-    // Cache sanitized user by authString for legacy lookups
     try {
       const publicUser = newUser.toObject();
       delete publicUser.password;
-      // keep authString in cache for legacy endpoints
       await redis.set(
         `user:${publicUser.authString}`,
         JSON.stringify(publicUser),
@@ -78,7 +71,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { identifier, password } = req.body; // identifier can be username or email
+    const { identifier, password } = req.body;
 
     if (!identifier || !password) {
       return res
@@ -86,7 +79,6 @@ export const login = async (req, res) => {
         .json({ message: "Please provide username/email and password." });
     }
 
-    // Find user
     const user = await User.findOne({
       $or: [{ username: identifier }, { email: identifier }],
     });
@@ -95,18 +87,16 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials." });
     }
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials." });
     }
 
-    // Generate JWT
     const secret = process.env.JWT_SECRET || "default_secret_key";
     const token = jwt.sign({ id: user._id, username: user.username }, secret, {
       expiresIn: "24h",
     });
-    // Update cache with sanitized user including authString for legacy endpoints
+
     try {
       const publicUser = user.toObject
         ? user.toObject()
@@ -147,13 +137,10 @@ export const login = async (req, res) => {
 
 export const me = async (req, res) => {
   try {
-    // req.user is set by the auth.middleware.js
-    // Try cache first
     const cached = await redis.get(`userId:${req.user.id}`);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        // return sanitized version without sensitive fields
         delete parsed.password;
         delete parsed.ip_encrypted;
         const resp = { ...parsed };
@@ -167,17 +154,13 @@ export const me = async (req, res) => {
       }
     }
 
-    // DB fallback and update cache
     const user = await User.findById(req.user.id).select(
       "-password -ip_encrypted",
     );
-    if (!user) {
-      return res.status(404).json({ message: "User not found." });
-    }
+    if (!user) return res.status(404).json({ message: "User not found." });
 
     try {
       const publicForCache = user.toObject();
-      // keep authString in cache for legacy endpoints
       delete publicForCache.password;
       await redis.set(
         `user:${publicForCache.authString}`,
@@ -193,7 +176,6 @@ export const me = async (req, res) => {
       console.warn("Failed to set user cache in me endpoint", e);
     }
 
-    // Return sanitized user without authString
     const responseUser = user.toObject();
     delete responseUser.password;
     delete responseUser.ip_encrypted;
