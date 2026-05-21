@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up — STEM Game</title>
+  <style>
+    :root {
+      --bg:         #080c14;
+      --surface:    #0f1523;
+      --border:     #1e2d45;
+      --primary:    #3b82f6;
+      --primary-dk: #2563eb;
+      --accent:     #00d4ff;
+      --text:       #e2e8f0;
+      --muted:      #64748b;
+      --error:      #f87171;
+      --error-bg:   rgba(248,113,113,0.08);
+      --error-bd:   rgba(248,113,113,0.28);
+      --success:    #34d399;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 60px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 18px; font-weight: 800; text-decoration: none; color: var(--text); }
+    .logo span { color: var(--accent); }
+    .nav-link { font-size: 13px; color: var(--muted); text-decoration: none; }
+    .nav-link:hover { color: var(--text); }
+
+    .page {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 40px 24px; position: relative; overflow: hidden;
+    }
+    .page::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(59,130,246,0.08) 1px, transparent 1px);
+      background-size: 32px 32px; pointer-events: none;
+    }
+    .page::after {
+      content: '';
+      position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 400px;
+      background: radial-gradient(ellipse, rgba(59,130,246,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .card {
+      position: relative; z-index: 1;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 40px;
+      width: 100%; max-width: 440px;
+      animation: fadeUp 0.3s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-title    { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .card-subtitle { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+
+    .name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .form-group { margin-bottom: 16px; }
+    label {
+      display: block; font-size: 13px; font-weight: 500;
+      color: var(--muted); margin-bottom: 6px;
+    }
+    .label-opt { font-weight: 400; opacity: 0.6; font-size: 11px; margin-left: 4px; }
+    input {
+      width: 100%;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: 7px; padding: 11px 14px;
+      font-size: 14px; color: var(--text); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+    input.invalid { border-color: var(--error) !important; }
+    input::placeholder { color: var(--muted); opacity: 0.55; }
+
+    .field-error { font-size: 12px; color: var(--error); margin-top: 4px; display: none; }
+    .field-error.show { display: block; }
+
+    .strength-bar {
+      height: 3px; border-radius: 2px; margin-top: 6px;
+      background: var(--border); overflow: hidden;
+    }
+    .strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; width: 0; }
+
+    .submit-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; padding: 12px; border-radius: 8px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none;
+      background: var(--primary); color: #fff;
+      margin-top: 8px; transition: all 0.18s;
+    }
+    .submit-btn:hover:not(:disabled) { background: var(--primary-dk); box-shadow: 0 0 24px rgba(59,130,246,0.4); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .error-box {
+      display: none;
+      background: var(--error-bg); border: 1px solid var(--error-bd);
+      color: var(--error); padding: 10px 14px; border-radius: 7px;
+      font-size: 13px; margin-bottom: 18px;
+    }
+    .error-box.show { display: block; }
+
+    .footer-note { text-align: center; margin-top: 24px; font-size: 13px; color: var(--muted); }
+    .footer-note a { color: #93c5fd; text-decoration: none; }
+    .footer-note a:hover { text-decoration: underline; }
+
+    .spinner {
+      display: inline-block; width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.55s linear infinite; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+      .nav { padding: 0 20px; }
+      .card { padding: 28px 20px; }
+      .name-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/" class="logo">STEM<span>Game</span></a>
+    <a href="/login.html" class="nav-link">Already have an account? Log in →</a>
+  </nav>
+
+  <main class="page">
+    <div class="card">
+      <h1 class="card-title">Create your account</h1>
+      <p class="card-subtitle">Join and start your personalized STEM journey</p>
+
+      <div class="error-box" id="errorBox"></div>
+
+      <form id="regForm" novalidate>
+        <div class="name-row">
+          <div class="form-group">
+            <label for="firstName">First Name <span class="label-opt">optional</span></label>
+            <input id="firstName" type="text" placeholder="Ada" autocomplete="given-name" />
+          </div>
+          <div class="form-group">
+            <label for="lastName">Last Name <span class="label-opt">optional</span></label>
+            <input id="lastName" type="text" placeholder="Lovelace" autocomplete="family-name" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input id="username" type="text" placeholder="ada_lovelace" autocomplete="username" required />
+          <div class="field-error" id="usernameErr">Username is required</div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="ada@example.com" autocomplete="email" required />
+          <div class="field-error" id="emailErr">A valid email is required</div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="at least 8 characters" autocomplete="new-password" required />
+          <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+          <div class="field-error" id="passwordErr">Password must be at least 8 characters</div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">Create Account</button>
+      </form>
+
+      <div class="footer-note">
+        Already have an account? <a href="/login.html">Log in</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const form       = document.getElementById('regForm');
+    const errorBox   = document.getElementById('errorBox');
+    const submitBtn  = document.getElementById('submitBtn');
+    const pwdInput   = document.getElementById('password');
+    const fill       = document.getElementById('strengthFill');
+
+    /* Password strength indicator */
+    pwdInput.addEventListener('input', () => {
+      const v = pwdInput.value;
+      let score = 0;
+      if (v.length >= 8)  score++;
+      if (v.length >= 12) score++;
+      if (/[A-Z]/.test(v) && /[0-9]/.test(v)) score++;
+      if (/[^A-Za-z0-9]/.test(v)) score++;
+      const colors = ['#f87171','#fb923c','#facc15','#34d399'];
+      fill.style.width = `${score * 25}%`;
+      fill.style.background = colors[score - 1] || 'transparent';
+    });
+
+    function setLoading(on) {
+      submitBtn.disabled = on;
+      submitBtn.innerHTML = on ? '<span class="spinner"></span>Creating account…' : 'Create Account';
+    }
+
+    function fieldErr(id, errId, show) {
+      const el  = document.getElementById(id);
+      const err = document.getElementById(errId);
+      el.classList.toggle('invalid', show);
+      err.classList.toggle('show',   show);
+      return show;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.classList.remove('show');
+
+      const username  = document.getElementById('username').value.trim();
+      const email     = document.getElementById('email').value.trim();
+      const password  = document.getElementById('password').value;
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName  = document.getElementById('lastName').value.trim();
+
+      let invalid = false;
+      if (fieldErr('username', 'usernameErr', !username))   invalid = true;
+      if (fieldErr('email',    'emailErr',    !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) invalid = true;
+      if (fieldErr('password', 'passwordErr', password.length < 8)) invalid = true;
+      if (invalid) return;
+
+      setLoading(true);
+      try {
+        const res  = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password, firstName, lastName }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errorBox.textContent = data.message || 'Registration failed. Please try again.';
+          errorBox.classList.add('show');
+          return;
+        }
+
+        /* Auto-login after register */
+        const loginRes  = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: username, password }),
+        });
+        const loginData = await loginRes.json();
+
+        if (loginRes.ok && loginData.token) {
+          localStorage.setItem('authToken', loginData.token);
+          localStorage.setItem('authUser',  JSON.stringify(loginData.user));
+        }
+
+        window.location.href = '/wizard.html';
+      } catch {
+        errorBox.textContent = 'Network error. Please check your connection.';
+        errorBox.classList.add('show');
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+
+</body>
+</html>

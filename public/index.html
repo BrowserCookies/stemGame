@@ -1,409 +1,239 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>STEM Game</title>
-  </head>
-  <body>
-    <div id="root"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STEM Game — Master STEM, One Level at a Time</title>
+  <style>
+    :root {
+      --bg:          #080c14;
+      --surface:     #0f1523;
+      --surface-2:   #151d2e;
+      --border:      #1e2d45;
+      --primary:     #3b82f6;
+      --primary-dk:  #2563eb;
+      --accent:      #00d4ff;
+      --text:        #e2e8f0;
+      --muted:       #64748b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
 
-    <script
-      crossorigin
-      src="https://unpkg.com/react@18/umd/react.development.js"
-    ></script>
-    <script
-      crossorigin
-      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
-    ></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    /* ── NAV ── */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 60px;
+      background: rgba(8,12,20,0.88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 18px; font-weight: 800; text-decoration: none; color: var(--text); letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+    .nav-right { display: flex; gap: 10px; }
 
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        background: #f6f8fa;
-      }
-      .wrap {
-        max-width: 1000px;
-        margin: 24px auto;
-        background: #fff;
-        padding: 16px;
-        border-radius: 6px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-      }
-      h1 {
-        margin-top: 0;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-      .card {
-        padding: 12px;
-        border: 1px solid #eee;
-        border-radius: 6px;
-        background: #fafafa;
-      }
-      label {
-        display: block;
-        font-size: 13px;
-        margin-top: 8px;
-      }
-      input,
-      textarea,
-      select {
-        width: 100%;
-        padding: 8px;
-        margin-top: 4px;
-        box-sizing: border-box;
-      }
-      button {
-        margin-top: 8px;
-        padding: 8px 12px;
-      }
-      pre {
-        max-height: 240px;
-        overflow: auto;
-        background: #111;
-        color: #0f0;
-        padding: 8px;
-        border-radius: 4px;
-      }
-      .full {
-        grid-column: 1 / -1;
-      }
-    </style>
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 9px 18px; border-radius: 7px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none; border: none;
+      transition: all 0.18s;
+    }
+    .btn-ghost {
+      background: transparent; color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: #3b4d69; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dk); box-shadow: 0 0 24px rgba(59,130,246,0.45); }
+    .btn-lg { padding: 13px 28px; font-size: 15px; border-radius: 8px; }
 
-    <script type="text/babel">
-      const { useState, useEffect } = React;
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      padding: 112px 24px 96px;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(59,130,246,0.11) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute; top: -180px; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 520px;
+      background: radial-gradient(ellipse, rgba(59,130,246,0.13) 0%, transparent 68%);
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; }
 
-      function useLocalToken() {
-        const [token, setToken] = useState(
-          localStorage.getItem("authToken") || "",
-        );
-        useEffect(() => {
-          if (token) localStorage.setItem("authToken", token);
-          else localStorage.removeItem("authToken");
-        }, [token]);
-        return [token, setToken];
-      }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.22);
+      color: #93c5fd;
+      padding: 5px 14px; border-radius: 100px;
+      font-size: 13px; font-weight: 500; margin-bottom: 32px;
+    }
 
-      function pretty(v) {
-        try {
-          return JSON.stringify(v, null, 2);
-        } catch (e) {
-          return String(v);
-        }
-      }
+    .hero h1 {
+      font-size: clamp(42px, 7.5vw, 82px);
+      font-weight: 800; letter-spacing: -3px; line-height: 1.04;
+      margin-bottom: 24px;
+    }
+    .hero h1 .gr {
+      background: linear-gradient(135deg, #60a5fa 30%, #00d4ff 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 18px; color: var(--muted);
+      max-width: 520px; margin: 0 auto 44px; line-height: 1.7;
+    }
+    .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
-      function App() {
-        const [token, setToken] = useLocalToken();
-        const [log, setLog] = useState("Ready");
-        const [suggestRes, setSuggestRes] = useState(null);
+    /* ── GLOWING DIVIDER ── */
+    .glow-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent 5%, rgba(59,130,246,0.3) 50%, transparent 95%);
+    }
 
-        const append = (t, obj) =>
-          setLog(
-            (l) =>
-              `${new Date().toLocaleTimeString()} [${t}]\n${pretty(obj)}\n\n` +
-              l,
-          );
+    /* ── FEATURES ── */
+    .features { padding: 96px 24px; max-width: 1100px; margin: 0 auto; }
 
-        return (
-          <div className="wrap">
-            <h1>STEM Game — Demo Console</h1>
-            <div className="grid">
-              <div className="card">
-                <h3>Auth</h3>
-                <AuthSection
-                  token={token}
-                  setToken={(t) => {
-                    setToken(t);
-                    append("auth:setToken", t);
-                  }}
-                  append={append}
-                />
-              </div>
+    .section-eyebrow {
+      text-align: center; color: var(--primary);
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .section-head {
+      text-align: center; margin-bottom: 56px;
+    }
+    .section-head h2 {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700; letter-spacing: -1.5px; margin-bottom: 12px;
+    }
+    .section-head p { color: var(--muted); font-size: 16px; max-width: 460px; margin: 0 auto; }
 
-              <div className="card">
-                <h3>Server</h3>
-                <ServerSection append={append} />
-              </div>
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+    }
+    .f-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+    .f-card:hover {
+      border-color: rgba(59,130,246,0.45);
+      box-shadow: 0 0 32px rgba(59,130,246,0.07);
+      transform: translateY(-2px);
+    }
+    .f-icon {
+      width: 46px; height: 46px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.18);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 18px;
+    }
+    .f-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.3px; }
+    .f-card p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
 
-              <div className="card">
-                <h3>Course</h3>
-                <CourseSection
-                  token={token}
-                  append={append}
-                  setSuggestRes={setSuggestRes}
-                  suggestRes={suggestRes}
-                />
-              </div>
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 48px;
+      display: flex; justify-content: space-between; align-items: center;
+      color: var(--muted); font-size: 13px;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+    .footer-links { display: flex; gap: 20px; }
 
-              <div className="card">
-                <h3>DB User (legacy)</h3>
-                <DbUserSection append={append} />
-              </div>
+    @media (max-width: 640px) {
+      .nav { padding: 0 20px; }
+      footer { padding: 24px 20px; flex-direction: column; gap: 10px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
 
-              <div className="card full">
-                <h3>Logs</h3>
-                <pre>{log}</pre>
-              </div>
-            </div>
-          </div>
-        );
-      }
+  <nav class="nav">
+    <a href="/" class="logo">STEM<span>Game</span></a>
+    <div class="nav-right">
+      <a href="/login.html"    class="btn btn-ghost">Log In</a>
+      <a href="/register.html" class="btn btn-primary">Get Started</a>
+    </div>
+  </nav>
 
-      function AuthSection({ token, setToken, append }) {
-        const [username, setUsername] = useState("");
-        const [email, setEmail] = useState("");
-        const [password, setPassword] = useState("");
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="badge">⚡ AI-Powered &nbsp;·&nbsp; Gamified &nbsp;·&nbsp; Free</div>
+      <h1>Master STEM,<br><span class="gr">One Level at a Time</span></h1>
+      <p>Personalized courses built by AI. Gamified challenges that make software engineering, math, and science actually engaging.</p>
+      <div class="hero-cta">
+        <a href="/register.html" class="btn btn-primary btn-lg">Start for Free &nbsp;→</a>
+        <a href="#features"      class="btn btn-ghost   btn-lg">See How It Works</a>
+      </div>
+    </div>
+  </section>
 
-        async function register() {
-          const body = { username, email, password };
-          const res = await fetch("/api/auth/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          const j = await res.json();
-          append("register", j);
-          alert(j.message || pretty(j));
-        }
+  <div class="glow-line"></div>
 
-        async function login() {
-          const body = { identifier: username || email, password };
-          const res = await fetch("/api/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          const j = await res.json();
-          append("login", j);
-          if (j.token) setToken(j.token);
-        }
+  <section class="features" id="features">
+    <div class="section-eyebrow">Features</div>
+    <div class="section-head">
+      <h2>Everything you need to level up</h2>
+      <p>Built for learners who want more than textbooks</p>
+    </div>
+    <div class="features-grid">
+      <div class="f-card">
+        <div class="f-icon">🤖</div>
+        <h3>AI-Generated Courses</h3>
+        <p>Answer a few questions and get a fully personalized course map built around your goals and current skill level.</p>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">🎮</div>
+        <h3>Gamified Levels</h3>
+        <p>Progress through structured levels, earn points, and unlock new challenges as you advance through the material.</p>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">💻</div>
+        <h3>Code Challenges</h3>
+        <p>Hands-on coding tasks embedded in every course. Learn by building real things, not just reading slides.</p>
+      </div>
+      <div class="f-card">
+        <div class="f-icon">📈</div>
+        <h3>Track Your Progress</h3>
+        <p>See exactly where you are, what you've mastered, and what's next on your personal learning path.</p>
+      </div>
+    </div>
+  </section>
 
-        async function me() {
-          const res = await fetch("/api/auth/me", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const j = await res.json();
-          append("me", j);
-          alert(pretty(j));
-        }
+  <div class="glow-line"></div>
 
-        return (
-          <div>
-            <label>username</label>
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <label>email</label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} />
-            <label>password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={register}>Register</button>
-              <button onClick={login}>Login</button>
-              <button onClick={me} disabled={!token}>
-                Me
-              </button>
-              <button
-                onClick={() => {
-                  setToken("");
-                  append("auth:logout", "cleared");
-                }}
-              >
-                Logout
-              </button>
-            </div>
-            <div style={{ marginTop: 8 }}>
-              Token:{" "}
-              <small style={{ wordBreak: "break-all" }}>
-                {token || "<none>"}
-              </small>
-            </div>
-          </div>
-        );
-      }
+  <footer>
+    <span>© 2026 STEMGame</span>
+    <div class="footer-links">
+      <a href="/login.html">Log In</a>
+      <a href="/register.html">Sign Up</a>
+    </div>
+  </footer>
 
-      function ServerSection({ append }) {
-        async function date() {
-          const j = await (await fetch("/api/date")).json();
-          append("date", j);
-        }
-        return (
-          <div>
-            <button onClick={date}>Get /api/date</button>
-          </div>
-        );
-      }
-
-      function CourseSection({ token, append, setSuggestRes, suggestRes }) {
-        const [answers, setAnswers] = useState(
-          '{"q1":"web dev","level":"beginner"}',
-        );
-        const [courseId, setCourseId] = useState("");
-        const [statusRes, setStatusRes] = useState(null);
-        const [courseRes, setCourseRes] = useState(null);
-
-        async function suggest() {
-          let body;
-          try {
-            body = JSON.parse(answers);
-          } catch (e) {
-            alert("Answers must be valid JSON");
-            return;
-          }
-          const res = await fetch("/api/course/suggest", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          const j = await res.json();
-          setSuggestRes(j);
-          append("course:suggest", j);
-        }
-
-        async function generate() {
-          let body;
-          try {
-            body = JSON.parse(answers);
-          } catch (e) {
-            alert("Answers must be valid JSON");
-            return;
-          }
-          const res = await fetch("/api/course/generate", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ answers: body }),
-          });
-          const j = await res.json();
-          append("course:generate", j);
-          if (j.courseId) setCourseId(j.courseId);
-        }
-
-        async function status() {
-          if (!courseId) return alert("no courseId");
-          const res = await fetch(`/api/course/status/${courseId}`);
-          const j = await res.json();
-          setStatusRes(j);
-          append("course:status", j);
-        }
-
-        async function getCourse() {
-          if (!courseId) return alert("no courseId");
-          const res = await fetch(`/api/course/${courseId}`);
-          const j = await res.json();
-          setCourseRes(j);
-          append("course:get", j);
-        }
-
-        return (
-          <div>
-            <label>Answers (JSON)</label>
-            <textarea
-              rows={4}
-              value={answers}
-              onChange={(e) => setAnswers(e.target.value)}
-            />
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={suggest}>Suggest</button>
-              <button onClick={generate} disabled={!token}>
-                Generate (auth)
-              </button>
-            </div>
-            <label>Course ID</label>
-            <input
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-            />
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={status}>Status</button>
-              <button onClick={getCourse}>Get Course</button>
-            </div>
-            <div style={{ marginTop: 8 }}>
-              <strong>Last Suggestion:</strong>
-              <pre>{pretty(suggestRes)}</pre>
-            </div>
-            <div>
-              <strong>Last Status:</strong>
-              <pre>{pretty(statusRes)}</pre>
-            </div>
-            <div>
-              <strong>Last Course:</strong>
-              <pre>{pretty(courseRes)}</pre>
-            </div>
-          </div>
-        );
-      }
-
-      function DbUserSection({ append }) {
-        const [user, setUser] = useState(
-          '{"firstName":"Api","lastName":"User","username":"setuser1","email":"setuser1@example.com","password":"Password123"}',
-        );
-        const [auth, setAuth] = useState("");
-
-        async function setUserReq() {
-          let obj;
-          try {
-            obj = JSON.parse(user);
-          } catch (e) {
-            alert("Invalid JSON");
-            return;
-          }
-          const b64 = btoa(JSON.stringify(obj));
-          const res = await fetch(
-            `/db/set-user?userData=${encodeURIComponent(b64)}`,
-            { method: "POST" },
-          );
-          const j = await res.json();
-          append("db:set-user", j);
-          alert(pretty(j));
-        }
-
-        async function getUser() {
-          if (!auth) return alert("enter auth string");
-          const res = await fetch(
-            `/db/get-user?auth=${encodeURIComponent(auth)}`,
-          );
-          const text = await res.text();
-          append("db:get-user", text);
-          alert(text);
-        }
-
-        return (
-          <div>
-            <label>New user JSON</label>
-            <textarea
-              rows={4}
-              value={user}
-              onChange={(e) => setUser(e.target.value)}
-            />
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={setUserReq}>Create (db/set-user)</button>
-            </div>
-            <label>auth string (from response)</label>
-            <input value={auth} onChange={(e) => setAuth(e.target.value)} />
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={getUser}>Get by auth (db/get-user)</button>
-            </div>
-          </div>
-        );
-      }
-
-      const root = ReactDOM.createRoot(document.getElementById("root"));
-      root.render(<App />);
-    </script>
-  </body>
+</body>
 </html>

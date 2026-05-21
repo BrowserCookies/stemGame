@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Build Your Course — STEM Game</title>
+  <style>
+    :root {
+      --bg:         #080c14;
+      --surface:    #0f1523;
+      --surface-2:  #151d2e;
+      --border:     #1e2d45;
+      --border-hi:  #2a3f5f;
+      --primary:    #3b82f6;
+      --primary-dk: #2563eb;
+      --accent:     #00d4ff;
+      --text:       #e2e8f0;
+      --muted:      #64748b;
+      --error:      #f87171;
+      --success:    #34d399;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+
+    /* NAV */
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 60px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .logo { font-size: 18px; font-weight: 800; text-decoration: none; color: var(--text); }
+    .logo span { color: var(--accent); }
+    .user-chip {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--muted);
+    }
+    .user-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff;
+    }
+    .logout-btn {
+      font-size: 12px; color: var(--muted); background: none;
+      border: none; cursor: pointer; padding: 4px 8px; border-radius: 5px;
+      transition: color 0.15s;
+    }
+    .logout-btn:hover { color: var(--text); }
+
+    /* MAIN */
+    #app {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 40px 24px; position: relative; overflow: hidden;
+    }
+    #app::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(59,130,246,0.07) 1px, transparent 1px);
+      background-size: 32px 32px; pointer-events: none;
+    }
+
+    /* React root */
+    #root { width: 100%; max-width: 620px; position: relative; z-index: 1; }
+
+    @media (max-width: 480px) {
+      .nav { padding: 0 20px; }
+      #app { padding: 24px 16px; align-items: flex-start; }
+    }
+  </style>
+
+  <!-- React + Babel (CDN) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/" class="logo">STEM<span>Game</span></a>
+    <div class="user-chip" id="userChip"></div>
+  </nav>
+
+  <main id="app">
+    <div id="root"></div>
+  </main>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    /* ── Auth guard ── */
+    const token = localStorage.getItem('authToken');
+    const user  = (() => { try { return JSON.parse(localStorage.getItem('authUser')); } catch { return null; } })();
+    if (!token) { window.location.replace('/login.html'); }
+
+    /* Render user chip */
+    const chip = document.getElementById('userChip');
+    if (user) {
+      chip.innerHTML = `
+        <div class="user-dot" style="background:${user.color || '#3b82f6'}">${(user.username || '?')[0].toUpperCase()}</div>
+        <span>${user.username}</span>
+        <button class="logout-btn" id="logoutBtn">Log out</button>
+      `;
+      document.getElementById('logoutBtn').onclick = () => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authUser');
+        window.location.href = '/login.html';
+      };
+    }
+
+    /* ── Shared styles (injected as a <style> via JSX className + inline CSS) ── */
+    const css = `
+      .wiz-card {
+        background: #0f1523; border: 1px solid #1e2d45;
+        border-radius: 14px; padding: 40px;
+        animation: fadeUp .28s ease;
+      }
+      @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+      .step-bar { display:flex; gap:6px; margin-bottom:32px; }
+      .step-dot {
+        flex:1; height:3px; border-radius:2px;
+        background:#1e2d45; transition: background .3s;
+      }
+      .step-dot.done { background:#3b82f6; }
+      .step-dot.active { background:#00d4ff; }
+
+      .wiz-label {
+        font-size:12px; font-weight:700; letter-spacing:2px;
+        text-transform:uppercase; color:#3b82f6; margin-bottom:10px;
+      }
+      .wiz-title {
+        font-size:22px; font-weight:700; letter-spacing:-.5px;
+        margin-bottom:6px;
+      }
+      .wiz-sub { font-size:14px; color:#64748b; margin-bottom:28px; }
+
+      .option-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+      .opt-btn {
+        display:flex; align-items:flex-start; gap:12px;
+        background:rgba(255,255,255,0.03); border:1px solid #1e2d45;
+        border-radius:9px; padding:14px 16px;
+        cursor:pointer; text-align:left; transition:all .18s;
+        color:#e2e8f0;
+      }
+      .opt-btn:hover { border-color:#2a3f5f; background:rgba(59,130,246,0.05); }
+      .opt-btn.selected { border-color:#3b82f6; background:rgba(59,130,246,0.1); }
+      .opt-icon { font-size:22px; flex-shrink:0; margin-top:1px; }
+      .opt-label { font-size:14px; font-weight:600; margin-bottom:2px; }
+      .opt-desc  { font-size:12px; color:#64748b; }
+
+      .level-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+
+      .nav-row { display:flex; justify-content:space-between; align-items:center; margin-top:28px; }
+      .back-btn {
+        background:transparent; border:1px solid #1e2d45;
+        color:#64748b; padding:10px 18px; border-radius:7px;
+        font-size:14px; font-weight:600; cursor:pointer; transition:all .18s;
+      }
+      .back-btn:hover { color:#e2e8f0; border-color:#2a3f5f; }
+      .next-btn {
+        background:#3b82f6; color:#fff;
+        border:none; padding:10px 24px; border-radius:7px;
+        font-size:14px; font-weight:600; cursor:pointer; transition:all .18s;
+        display:flex; align-items:center; gap:8px;
+      }
+      .next-btn:hover:not(:disabled) { background:#2563eb; box-shadow:0 0 20px rgba(59,130,246,.4); }
+      .next-btn:disabled { opacity:.45; cursor:not-allowed; }
+
+      .preview-box {
+        background:#151d2e; border:1px solid #1e2d45;
+        border-radius:10px; padding:20px; margin-bottom:20px;
+      }
+      .preview-title { font-size:16px; font-weight:700; margin-bottom:10px; }
+      .outline-item {
+        display:flex; align-items:flex-start; gap:8px;
+        font-size:13px; padding:6px 0; border-bottom:1px solid #1e2d45;
+      }
+      .outline-item:last-child { border-bottom:none; }
+      .outline-num {
+        background:rgba(59,130,246,0.15); color:#60a5fa;
+        border-radius:4px; padding:1px 7px; font-size:11px; font-weight:700;
+        flex-shrink:0; margin-top:2px;
+      }
+      .task-pills { display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
+      .task-pill {
+        background:rgba(255,255,255,0.05); border:1px solid #1e2d45;
+        border-radius:4px; padding:2px 8px; font-size:11px; color:#9ca3af;
+      }
+
+      .spinner {
+        display:inline-block; width:14px; height:14px;
+        border:2px solid rgba(255,255,255,0.3); border-top-color:#fff;
+        border-radius:50%; animation:spin .55s linear infinite;
+      }
+      @keyframes spin { to { transform:rotate(360deg); } }
+
+      .status-pill {
+        display:inline-flex; align-items:center; gap:6px;
+        padding:4px 12px; border-radius:100px; font-size:12px; font-weight:600;
+      }
+      .status-generating { background:rgba(251,191,36,.1); color:#fbbf24; border:1px solid rgba(251,191,36,.25); }
+      .status-completed  { background:rgba(52,211,153,.1); color:#34d399; border:1px solid rgba(52,211,153,.25); }
+      .status-failed     { background:rgba(248,113,113,.1); color:#f87171; border:1px solid rgba(248,113,113,.25); }
+
+      .pulse-dot {
+        width:7px; height:7px; border-radius:50%;
+        background:currentColor; animation:pulse 1.2s infinite;
+      }
+      @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+      .course-section { margin-bottom:20px; }
+      .course-section h3 { font-size:15px; font-weight:700; margin-bottom:10px; color:#e2e8f0; }
+      .level-block {
+        background:#151d2e; border:1px solid #1e2d45;
+        border-radius:8px; padding:14px 16px; margin-bottom:8px;
+      }
+      .level-title { font-size:13px; font-weight:600; margin-bottom:4px; }
+      .level-desc  { font-size:12px; color:#64748b; margin-bottom:8px; }
+
+      .error-box {
+        background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.28);
+        color:#f87171; padding:10px 14px; border-radius:7px;
+        font-size:13px; margin-bottom:16px;
+      }
+
+      @media (max-width:480px) {
+        .wiz-card { padding:24px 18px; }
+        .option-grid { grid-template-columns:1fr; }
+        .level-grid  { grid-template-columns:1fr; }
+      }
+    `;
+
+    /* ── Data ── */
+    const TOPICS = [
+      { id: 'software-eng',   icon: '⚙️',  label: 'Software Engineering',  desc: 'Systems, architecture, best practices' },
+      { id: 'web-dev',        icon: '🌐',  label: 'Web Development',        desc: 'HTML, CSS, JS, frameworks' },
+      { id: 'algorithms',     icon: '🧠',  label: 'Algorithms & DS',        desc: 'Problem solving & computer science' },
+      { id: 'data-science',   icon: '📊',  label: 'Data Science / AI',      desc: 'ML, data analysis, Python' },
+      { id: 'mathematics',    icon: '∑',   label: 'Mathematics',            desc: 'Algebra, calculus, discrete math' },
+      { id: 'other',          icon: '✨',  label: 'Other STEM topic',       desc: 'Describe it yourself below' },
+    ];
+
+    const LEVELS = [
+      { id: 'beginner',     label: 'Beginner',     icon: '🌱', desc: 'New to this area' },
+      { id: 'intermediate', label: 'Intermediate', icon: '⚡', desc: 'Some experience' },
+      { id: 'advanced',     label: 'Advanced',     icon: '🔥', desc: 'Want to go deeper' },
+    ];
+
+    const GOALS = [
+      { id: 'get-job',       icon: '💼', label: 'Get a job',          desc: 'Build skills employers want' },
+      { id: 'build-project', icon: '🛠️', label: 'Build a project',    desc: 'Ship something real' },
+      { id: 'pass-exam',     icon: '📝', label: 'Pass an exam',       desc: 'Structured exam prep' },
+      { id: 'curiosity',     icon: '🔭', label: 'Personal interest',  desc: 'Learn for the joy of it' },
+    ];
+
+    /* ── Step components ── */
+    function StepBar({ current, total }) {
+      return (
+        <div className="step-bar">
+          {Array.from({ length: total }).map((_, i) => (
+            <div
+              key={i}
+              className={`step-dot ${i < current ? 'done' : i === current ? 'active' : ''}`}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    function OptionGrid({ options, selected, onSelect, className = 'option-grid' }) {
+      return (
+        <div className={className}>
+          {options.map(o => (
+            <button
+              key={o.id}
+              className={`opt-btn ${selected === o.id ? 'selected' : ''}`}
+              onClick={() => onSelect(o.id)}
+              type="button"
+            >
+              <span className="opt-icon">{o.icon}</span>
+              <span>
+                <div className="opt-label">{o.label}</div>
+                <div className="opt-desc">{o.desc}</div>
+              </span>
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    /* ── Step 1: Topic ── */
+    function Step1({ answers, setAnswers, onNext }) {
+      const [customTopic, setCustomTopic] = useState(answers.customTopic || '');
+      const showCustom = answers.topic === 'other';
+
+      function handleNext() {
+        const final = showCustom
+          ? { ...answers, customTopic, topicLabel: customTopic || 'Custom topic' }
+          : { ...answers };
+        setAnswers(final);
+        onNext();
+      }
+
+      const canNext = answers.topic && (answers.topic !== 'other' || customTopic.trim());
+
+      return (
+        <div className="wiz-card">
+          <StepBar current={0} total={4} />
+          <div className="wiz-label">Step 1 of 4</div>
+          <div className="wiz-title">What do you want to learn?</div>
+          <div className="wiz-sub">Pick the topic that excites you most</div>
+          <OptionGrid
+            options={TOPICS}
+            selected={answers.topic}
+            onSelect={id => setAnswers({ ...answers, topic: id, topicLabel: TOPICS.find(t => t.id === id)?.label })}
+          />
+          {showCustom && (
+            <input
+              style={{
+                marginTop: 12, width: '100%',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid #1e2d45', borderRadius: 7,
+                padding: '10px 14px', fontSize: 14, color: '#e2e8f0',
+                outline: 'none',
+              }}
+              placeholder="Describe your topic…"
+              value={customTopic}
+              onChange={e => setCustomTopic(e.target.value)}
+            />
+          )}
+          <div className="nav-row">
+            <span />
+            <button className="next-btn" disabled={!canNext} onClick={handleNext}>
+              Next →
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Step 2: Skill level ── */
+    function Step2({ answers, setAnswers, onNext, onBack }) {
+      return (
+        <div className="wiz-card">
+          <StepBar current={1} total={4} />
+          <div className="wiz-label">Step 2 of 4</div>
+          <div className="wiz-title">What's your current level?</div>
+          <div className="wiz-sub">Be honest — there's no wrong answer</div>
+          <OptionGrid
+            options={LEVELS}
+            selected={answers.level}
+            onSelect={id => setAnswers({ ...answers, level: id })}
+            className="level-grid"
+          />
+          <div className="nav-row">
+            <button className="back-btn" onClick={onBack}>← Back</button>
+            <button className="next-btn" disabled={!answers.level} onClick={onNext}>Next →</button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Step 3: Goal ── */
+    function Step3({ answers, setAnswers, onNext, onBack }) {
+      return (
+        <div className="wiz-card">
+          <StepBar current={2} total={4} />
+          <div className="wiz-label">Step 3 of 4</div>
+          <div className="wiz-title">What's your main goal?</div>
+          <div className="wiz-sub">This shapes how your course is structured</div>
+          <OptionGrid
+            options={GOALS}
+            selected={answers.goal}
+            onSelect={id => setAnswers({ ...answers, goal: id })}
+          />
+          <div className="nav-row">
+            <button className="back-btn" onClick={onBack}>← Back</button>
+            <button className="next-btn" disabled={!answers.goal} onClick={onNext}>Preview →</button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Step 4: Preview & Generate ── */
+    function Step4({ answers, onBack }) {
+      const [preview, setPreview]     = useState(null);
+      const [loading, setLoading]     = useState(false);
+      const [generating, setGenerating] = useState(false);
+      const [courseId, setCourseId]   = useState(null);
+      const [status, setStatus]       = useState(null);
+      const [course, setCourse]       = useState(null);
+      const [error, setError]         = useState('');
+      const pollRef = useRef(null);
+
+      useEffect(() => {
+        fetchPreview();
+        return () => clearInterval(pollRef.current);
+      }, []);
+
+      async function fetchPreview() {
+        setLoading(true);
+        setError('');
+        try {
+          const res  = await fetch('/api/course/suggest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(answers),
+          });
+          const data = await res.json();
+          if (data.success) setPreview(data.suggestion);
+          else setError('Could not load preview. You can still generate the full course.');
+        } catch {
+          setError('Network error while fetching preview.');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function generate() {
+        setGenerating(true);
+        setError('');
+        try {
+          const res  = await fetch('/api/course/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ answers }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.courseId) {
+            setError(data.error || 'Failed to start generation.');
+            setGenerating(false);
+            return;
+          }
+          setCourseId(data.courseId);
+          setStatus('generating');
+          pollRef.current = setInterval(() => pollStatus(data.courseId), 2000);
+        } catch {
+          setError('Network error. Please try again.');
+          setGenerating(false);
+        }
+      }
+
+      async function pollStatus(id) {
+        try {
+          const res  = await fetch(`/api/course/status/${id}`);
+          const data = await res.json();
+          if (!data.success) return;
+          setStatus(data.status);
+          if (data.status === 'completed') {
+            clearInterval(pollRef.current);
+            fetchCourse(id);
+          } else if (data.status === 'failed') {
+            clearInterval(pollRef.current);
+            setGenerating(false);
+            setError('Course generation failed. Please try again.');
+          }
+        } catch { /* keep polling */ }
+      }
+
+      async function fetchCourse(id) {
+        try {
+          const res  = await fetch(`/api/course/${id}`);
+          const data = await res.json();
+          if (data.success) setCourse(data.course);
+        } catch {
+          setError('Could not load the generated course.');
+        } finally {
+          setGenerating(false);
+        }
+      }
+
+      /* ── Render: course result ── */
+      if (course) {
+        const map = course.generatedMap || {};
+        return (
+          <div className="wiz-card">
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+              <div>
+                <div className="wiz-label">Your Course is Ready</div>
+                <div className="wiz-title">{map.title || course.title}</div>
+              </div>
+              <span className="status-pill status-completed">✓ Generated</span>
+            </div>
+
+            {map.description && (
+              <p style={{ fontSize:14, color:'#9ca3af', marginBottom:20 }}>{map.description}</p>
+            )}
+
+            {map.levels && map.levels.length > 0 ? (
+              <div className="course-section">
+                <h3>Course Map</h3>
+                {map.levels.map((lvl, i) => (
+                  <div key={lvl.id || i} className="level-block">
+                    <div className="level-title">Level {i + 1}: {lvl.title}</div>
+                    {lvl.description && <div className="level-desc">{lvl.description}</div>}
+                    {lvl.tasks && lvl.tasks.length > 0 && (
+                      <div className="task-pills">
+                        {lvl.tasks.map((t, j) => (
+                          <span key={j} className="task-pill">{t.question || t.id || `Task ${j+1}`}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : map.outline ? (
+              <div className="course-section">
+                <h3>Outline</h3>
+                {map.outline.map((lvl, i) => (
+                  <div key={i} className="level-block">
+                    <div className="level-title">Level {lvl.level || i+1}: {lvl.title}</div>
+                    {lvl.tasks && (
+                      <div className="task-pills">
+                        {(Array.isArray(lvl.tasks) ? lvl.tasks : []).map((t, j) => (
+                          <span key={j} className="task-pill">{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <button
+              className="next-btn"
+              style={{ width:'100%', justifyContent:'center', marginTop:8 }}
+              onClick={() => {
+                setCourse(null); setCourseId(null);
+                setStatus(null); setPreview(null);
+                setGenerating(false);
+                fetchPreview();
+              }}
+            >
+              Generate Another Course
+            </button>
+          </div>
+        );
+      }
+
+      /* ── Render: generating ── */
+      if (generating) {
+        return (
+          <div className="wiz-card" style={{ textAlign:'center', padding:'56px 40px' }}>
+            <div style={{ marginBottom:20, fontSize:40 }}>⚙️</div>
+            <div className="wiz-title" style={{ marginBottom:10 }}>Building your course…</div>
+            <p style={{ color:'#64748b', fontSize:14, marginBottom:24 }}>
+              Our AI is crafting your personalized course map. This takes a few seconds.
+            </p>
+            <span className={`status-pill status-${status || 'generating'}`}>
+              <span className="pulse-dot" />
+              {status === 'generating' ? 'Generating' : status || 'Working'}
+            </span>
+          </div>
+        );
+      }
+
+      /* ── Render: preview / confirm ── */
+      return (
+        <div className="wiz-card">
+          <StepBar current={3} total={4} />
+          <div className="wiz-label">Step 4 of 4</div>
+          <div className="wiz-title">Your course preview</div>
+          <div className="wiz-sub">Here's what we'll build for you — generate to get the full map</div>
+
+          {error && <div className="error-box">{error}</div>}
+
+          {loading ? (
+            <div style={{ textAlign:'center', padding:'32px 0', color:'#64748b' }}>
+              <span className="spinner" style={{ marginRight:10 }} />
+              Loading preview…
+            </div>
+          ) : preview ? (
+            <div className="preview-box">
+              <div className="preview-title">{preview.title}</div>
+              {(preview.outline || []).map((lvl, i) => (
+                <div key={i} className="outline-item">
+                  <span className="outline-num">L{lvl.level || i+1}</span>
+                  <span>
+                    <strong style={{ fontSize:13 }}>{lvl.title}</strong>
+                    {lvl.tasks && (
+                      <div className="task-pills">
+                        {(Array.isArray(lvl.tasks) ? lvl.tasks : []).map((t, j) => (
+                          <span key={j} className="task-pill">{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div style={{
+            background:'rgba(59,130,246,0.06)', border:'1px solid rgba(59,130,246,0.18)',
+            borderRadius:9, padding:'12px 16px', marginBottom:20,
+            fontSize:13, color:'#93c5fd',
+          }}>
+            <strong style={{ display:'block', marginBottom:4 }}>Your selections</strong>
+            <span style={{ color:'#64748b' }}>
+              Topic: <strong style={{ color:'#e2e8f0' }}>{answers.topicLabel || answers.topic}</strong>
+              &nbsp;·&nbsp;
+              Level: <strong style={{ color:'#e2e8f0' }}>{answers.level}</strong>
+              &nbsp;·&nbsp;
+              Goal: <strong style={{ color:'#e2e8f0' }}>{GOALS.find(g => g.id === answers.goal)?.label}</strong>
+            </span>
+          </div>
+
+          <div className="nav-row">
+            <button className="back-btn" onClick={onBack}>← Back</button>
+            <button className="next-btn" onClick={generate}>
+              🚀&nbsp; Generate Full Course
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Root Wizard ── */
+    function Wizard() {
+      const [step, setStep]       = useState(0);
+      const [answers, setAnswers] = useState({ topic: '', level: '', goal: '' });
+
+      const steps = [
+        <Step1 key={0} answers={answers} setAnswers={setAnswers} onNext={() => setStep(1)} />,
+        <Step2 key={1} answers={answers} setAnswers={setAnswers} onNext={() => setStep(2)} onBack={() => setStep(0)} />,
+        <Step3 key={2} answers={answers} setAnswers={setAnswers} onNext={() => setStep(3)} onBack={() => setStep(1)} />,
+        <Step4 key={3} answers={answers} onBack={() => setStep(2)} />,
+      ];
+
+      return (
+        <>
+          <style>{css}</style>
+          {steps[step]}
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<Wizard />);
+  </script>
+
+</body>
+</html>
